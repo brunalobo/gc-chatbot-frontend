@@ -99,8 +99,25 @@ menuBtn.addEventListener("click", openSidebar);
 sidebarClose.addEventListener("click", closeSidebar);
 sidebarOverlay.addEventListener("click", closeSidebar);
 
-// Session ID for conversation history
-const sessionId = "session_" + Date.now();
+// Session ID for Azure AI Agent threads
+const sessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+
+// Verificar se marked.js foi carregado
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof marked === 'undefined') {
+    console.error('❌ Marked.js NÃO foi carregado! Formatação Markdown não funcionará.');
+  } else {
+    console.log('✅ Marked.js carregado com sucesso!');
+  }
+});
+
+// Conversation history for Azure OpenAI
+const conversationHistory = [
+  {
+    role: "system",
+    content: "Você é um assistente virtual prestativo. Responda de forma clara e concisa em português."
+  }
+];
 
 // Send message function
 async function sendMessage() {
@@ -112,8 +129,10 @@ async function sendMessage() {
   userInput.disabled = true;
   sendBtn.disabled = true;
 
-  // Add user message to chat
+  // Add user message to chat and history
   addMessage(message, "user");
+  conversationHistory.push({ role: "user", content: message });
+  
   userInput.value = "";
   // Reset textarea height and button state immediately after sending
   try {
@@ -133,7 +152,7 @@ async function sendMessage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message, sessionId }),
+      body: JSON.stringify({ messages: conversationHistory, sessionId }),
     });
 
     const data = await response.json();
@@ -141,11 +160,13 @@ async function sendMessage() {
     // Remove typing indicator
     typingIndicator.remove();
 
-    if (response.ok) {
-      addMessage(data.response, "assistant");
+    if (response.ok && data.message) {
+      const assistantMessage = data.message.content;
+      addMessage(assistantMessage, "assistant");
+      conversationHistory.push({ role: "assistant", content: assistantMessage });
     } else {
       addMessage(
-        "Desculpe, ocorreu um erro ao processar sua mensagem.",
+        data.error || "Desculpe, ocorreu um erro ao processar sua mensagem.",
         "assistant"
       );
     }
@@ -213,7 +234,31 @@ function addMessage(text, sender) {
 
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${sender}`;
-  messageDiv.textContent = text;
+  
+  // Se for assistente, renderizar Markdown; se for usuário, texto simples
+  if (sender === "assistant") {
+    // Verificar se marked está disponível
+    if (typeof marked !== 'undefined') {
+      // Configurar marked para segurança e formatação
+      marked.setOptions({
+        breaks: true,        // Quebras de linha viram <br>
+        gfm: true,          // GitHub Flavored Markdown
+        headerIds: false,   // Não gerar IDs nos headers
+        mangle: false       // Não codificar emails
+      });
+      messageDiv.innerHTML = marked.parse(text);
+    } else {
+      console.warn('Marked.js não encontrado, usando texto simples');
+      // Fallback: pelo menos renderizar quebras de linha e negrito básico
+      const formattedText = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      messageDiv.innerHTML = formattedText;
+    }
+  } else {
+    messageDiv.textContent = text;
+  }
+  
   chatMessages.appendChild(messageDiv);
 
   // Scroll to bottom with smooth animation
@@ -224,7 +269,11 @@ function addMessage(text, sender) {
 function showTypingIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "typing-indicator";
-  indicator.innerHTML = "<span></span><span></span><span></span>";
+  indicator.innerHTML = `
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>
+  `;
   chatMessages.appendChild(indicator);
   scrollToBottom();
   return indicator;

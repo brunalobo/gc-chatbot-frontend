@@ -85,6 +85,105 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
+/* Formatação Markdown dentro das mensagens do assistente */
+.message.assistant h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 12px 0 8px 0;
+  color: var(--primary-color);
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 4px;
+}
+
+.message.assistant h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 10px 0 6px 0;
+  color: #333;
+}
+
+.message.assistant p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.message.assistant strong {
+  font-weight: 600;
+  color: #000;
+}
+
+.message.assistant em {
+  font-style: italic;
+  color: #666;
+}
+
+.message.assistant hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 2px solid #e0e0e0;
+}
+
+.message.assistant ul,
+.message.assistant ol {
+  margin: 8px 0 8px 20px;
+  padding-left: 0;
+}
+
+.message.assistant li {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.message.assistant code {
+  background-color: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #d63384;
+}
+
+.message.assistant pre {
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.message.assistant pre code {
+  background: none;
+  padding: 0;
+  color: #333;
+}
+
+.message.assistant blockquote {
+  border-left: 4px solid var(--primary-color);
+  margin: 10px 0;
+  padding: 8px 0 8px 12px;
+  background-color: #f8f9fa;
+  font-style: italic;
+}
+
+.message.assistant a {
+  color: var(--primary-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom 0.2s;
+}
+
+.message.assistant a:hover {
+  border-bottom: 1px solid var(--primary-color);
+}
+
+/* Estilo para as referências [1], [2], etc */
+.message.assistant sup {
+  font-size: 0.75em;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+
 /* Input Container */
 .input-container {
   width: 100%;
@@ -220,12 +319,27 @@
 /* Loading Animation */
 .typing-indicator {
   display: flex;
-  gap: 5px;
+  flex-direction: column;
+  gap: 8px;
   padding: 15px 20px;
-  background-color: var(--background-color);
-  border-radius: 10px;
+  background-color: #ffffff;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
   align-self: flex-start;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  max-width: 75%;
+  animation: fadeIn 0.3s ease;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.typing-text {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
 }
 
 .typing-indicator span {
@@ -252,11 +366,11 @@
   0%,
   60%,
   100% {
-    transform: translateY(0);
+    transform: scale(1);
     opacity: 0.4;
   }
   30% {
-    transform: translateY(-5px);
+    transform: scale(1.2);
     opacity: 1;
   }
 }
