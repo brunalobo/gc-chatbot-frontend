@@ -1,0 +1,14 @@
+{
+  "name": "gc-chatbot-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend da aplicação de chatbot OceanPact usando Azure AI",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.1.0"
+  }
+}

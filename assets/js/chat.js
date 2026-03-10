@@ -1,5 +1,7 @@
+import CONFIG from './config.js';
+
 // API Configuration
-const API_URL = "http://localhost:3000/api";
+const API_URL = CONFIG?.API_URL || "http://localhost:3000/api";
 
 // DOM Elements
 const chatMessages = document.getElementById("chatMessages");

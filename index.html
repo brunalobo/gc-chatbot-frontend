@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="frontend/assets/css/style.css">
-    <link rel="stylesheet" href="frontend/assets/css/chatbot.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/chatbot.css">
 </head>
 
 <body>
@@ -21,7 +21,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
-                <img src="frontend/assets/img/simbolo_branco.png" alt="OceanPact">
+                <img src="assets/img/simbolo_branco.png" alt="OceanPact">
             </div>
             <button class="sidebar-close" id="sidebarClose" aria-label="Fechar menu">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -78,7 +78,7 @@
                 </svg>
             </button>
             <div class="logo">
-                <img src="frontend/assets/img/simbolo_branco.png" alt="OceanPact">
+                <img src="assets/img/simbolo_branco.png" alt="OceanPact">
             </div>
             <h1 class="header-title">Gestão do Conhecimento</h1>
             <button class="login-btn" id="loginBtn" aria-label="Entrar com Microsoft">
@@ -143,7 +143,8 @@
 
     <!-- Biblioteca Marked.js para renderizar Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="frontend/assets/js/chat.js"></script>
+    <!-- App principal -->
+    <script type="module" src="/assets/js/chat.js"></script>
 </body>
 
 </html>
