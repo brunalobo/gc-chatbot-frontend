@@ -247,6 +247,32 @@ function addMessage(text, sender) {
         mangle: false       // Não codificar emails
       });
       messageDiv.innerHTML = marked.parse(text);
+      
+      // Adicionar atributo download e classe especial para links de PDF
+      const links = messageDiv.querySelectorAll('a[href*="/api/download/"]');
+      links.forEach(link => {
+        // Extrair o nome do arquivo da URL
+        const url = new URL(link.href, window.location.origin);
+        const filename = decodeURIComponent(url.pathname.split('/').pop());
+        
+        // Adicionar atributo download e classe especial
+        link.setAttribute('download', filename);
+        link.classList.add('pdf-download');
+        
+        // Prevenir navegação padrão, forçar download
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          
+          // Criar elemento temporário para download
+          const downloadLink = document.createElement('a');
+          downloadLink.href = link.href;
+          downloadLink.download = filename;
+          downloadLink.style.display = 'none';
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        });
+      });
     } else {
       console.warn('Marked.js não encontrado, usando texto simples');
       // Fallback: pelo menos renderizar quebras de linha e negrito básico

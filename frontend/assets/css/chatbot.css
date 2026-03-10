@@ -176,6 +176,28 @@
   border-bottom: 1px solid var(--primary-color);
 }
 
+/* Estilo específico para links de download PDF */
+.message.assistant a.pdf-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #f0f7ff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: var(--primary-color);
+  font-weight: 500;
+  border: 1px solid #d0e7ff;
+  transition: all 0.2s ease;
+}
+
+.message.assistant a.pdf-download:hover {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 77, 146, 0.2);
+}
+
 /* Estilo para as referências [1], [2], etc */
 .message.assistant sup {
   font-size: 0.75em;
