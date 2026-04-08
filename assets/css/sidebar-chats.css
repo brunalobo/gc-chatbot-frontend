@@ -1,0 +1,99 @@
+.saved-chats-section {
+  margin-top: 24px;
+  padding: 0 6px;
+}
+
+.saved-chats-title {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  padding: 0 10px;
+  margin-bottom: 10px;
+}
+
+.saved-chats-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saved-chat-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.saved-chat-item {
+  font-family: inherit;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.saved-chat-item:hover {
+  background-color: var(--background-gray);
+}
+
+.saved-chat-item.active {
+  background-color: #dce9ef;
+}
+
+.saved-chat-delete {
+  width: 34px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.saved-chat-delete:hover {
+  background-color: #f2dede;
+  color: #b42318;
+}
+
+.saved-chat-delete svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.saved-chat-name {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.saved-chat-date {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.saved-chat-empty {
+  font-family: inherit;
+  padding: 10px;
+  font-size: 0.86rem;
+  color: #6b7280;
+}

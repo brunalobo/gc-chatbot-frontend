@@ -10,6 +10,9 @@ export const CONFIG = {
   // Configuração de timeouts
   REQUEST_TIMEOUT: 30000, // 30 segundos
   
+  // Azure AI Agent Reference (atualizar com seu ID real)
+  AGENT_REFERENCE: 'default-agent-id',
+  
   // Outras configurações podem ser adicionadas aqui
   ENABLE_DEBUG: true,
 };

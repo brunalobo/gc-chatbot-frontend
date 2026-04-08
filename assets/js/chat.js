@@ -22,6 +22,8 @@ const header = document.querySelector(".header");
 const headerContent = document.querySelector(".header-content");
 const mainElement = document.querySelector("main");
 const headerLogo = document.querySelector(".header .logo");
+const newChatBtn = document.getElementById("newChatBtn");
+const savedChatsList = document.getElementById("savedChatsList");
 
 // Login Modal Elements
 const loginModal = document.getElementById("loginModal");
@@ -101,8 +103,8 @@ menuBtn.addEventListener("click", openSidebar);
 sidebarClose.addEventListener("click", closeSidebar);
 sidebarOverlay.addEventListener("click", closeSidebar);
 
-// Session ID for Azure AI Agent threads
-const sessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+const CHAT_STORAGE_KEY = "gc_saved_chats_v1";
+const SYSTEM_PROMPT = "Você é um assistente virtual prestativo. Responda de forma clara e concisa em português.";
 
 // Verificar se marked.js foi carregado
 window.addEventListener('DOMContentLoaded', () => {
@@ -111,15 +113,233 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     console.log('✅ Marked.js carregado com sucesso!');
   }
+
+  loadSavedChats();
+  startNewChat();
 });
 
 // Conversation history for Azure OpenAI
-const conversationHistory = [
-  {
-    role: "system",
-    content: "Você é um assistente virtual prestativo. Responda de forma clara e concisa em português."
+const conversationHistory = [{ role: "system", content: SYSTEM_PROMPT }];
+let savedChats = [];
+let currentChatId = null;
+let currentSessionId = generateSessionId();
+
+function generateSessionId() {
+  return "session_" + Date.now() + "_" + Math.random().toString(36).slice(2, 11);
+}
+
+function createSystemMessage() {
+  return { role: "system", content: SYSTEM_PROMPT };
+}
+
+function resetConversationHistory(messages = [createSystemMessage()]) {
+  conversationHistory.length = 0;
+  messages.forEach((message) => conversationHistory.push(message));
+}
+
+function persistSavedChats() {
+  try {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(savedChats));
+  } catch (error) {
+    console.error("Erro ao salvar chats no localStorage:", error);
   }
-];
+}
+
+function loadSavedChats() {
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    savedChats = Array.isArray(parsed) ? parsed : [];
+    savedChats.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  } catch (error) {
+    console.error("Erro ao carregar chats salvos:", error);
+    savedChats = [];
+  }
+
+  renderSavedChats();
+}
+
+function getChatTitle(messages) {
+  const firstUserMessage = messages.find((entry) => entry.role === "user");
+  if (!firstUserMessage?.content) return "Novo chat";
+
+  const normalized = firstUserMessage.content.replace(/\s+/g, " ").trim();
+  return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
+}
+
+function syncCurrentChatToStorage() {
+  const hasUserContent = conversationHistory.some((entry) => entry.role === "user");
+  if (!hasUserContent) {
+    renderSavedChats();
+    return;
+  }
+
+  const snapshot = {
+    id: currentChatId || `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    title: getChatTitle(conversationHistory),
+    updatedAt: new Date().toISOString(),
+    sessionId: currentSessionId,
+    messages: conversationHistory.map((entry) => ({ ...entry }))
+  };
+
+  currentChatId = snapshot.id;
+  const existingIndex = savedChats.findIndex((entry) => entry.id === snapshot.id);
+  if (existingIndex !== -1) {
+    savedChats.splice(existingIndex, 1);
+  }
+
+  savedChats.unshift(snapshot);
+  persistSavedChats();
+  renderSavedChats();
+}
+
+function formatChatDate(isoDate) {
+  if (!isoDate) return "";
+
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function deleteChat(chatId) {
+  const chat = savedChats.find((entry) => entry.id === chatId);
+  if (!chat) return;
+
+  const confirmed = window.confirm(`Deseja excluir a conversa \"${chat.title || "Novo chat"}\"?`);
+  if (!confirmed) return;
+
+  savedChats = savedChats.filter((entry) => entry.id !== chatId);
+  persistSavedChats();
+
+  if (currentChatId === chatId) {
+    if (savedChats.length > 0) {
+      loadChat(savedChats[0].id);
+    } else {
+      startNewChat();
+    }
+    return;
+  }
+
+  renderSavedChats();
+}
+
+function renderSavedChats() {
+  if (!savedChatsList) return;
+
+  savedChatsList.innerHTML = "";
+  if (savedChats.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "saved-chat-empty";
+    emptyItem.textContent = "Nenhum chat salvo ainda";
+    savedChatsList.appendChild(emptyItem);
+    return;
+  }
+
+  savedChats.forEach((chat) => {
+    const item = document.createElement("li");
+    const row = document.createElement("div");
+    row.className = "saved-chat-row";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "saved-chat-item";
+    if (chat.id === currentChatId) {
+      button.classList.add("active");
+    }
+
+    const name = document.createElement("span");
+    name.className = "saved-chat-name";
+    name.textContent = chat.title || "Novo chat";
+
+    const date = document.createElement("span");
+    date.className = "saved-chat-date";
+    date.textContent = formatChatDate(chat.updatedAt);
+
+    button.appendChild(name);
+    button.appendChild(date);
+    button.addEventListener("click", () => {
+      loadChat(chat.id);
+      closeSidebar();
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "saved-chat-delete";
+    deleteButton.setAttribute("aria-label", `Excluir conversa ${chat.title || "Novo chat"}`);
+    deleteButton.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 6h18"></path>
+        <path d="M8 6V4h8v2"></path>
+        <path d="M19 6l-1 14H6L5 6"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+      </svg>
+    `;
+    deleteButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteChat(chat.id);
+    });
+
+    row.appendChild(button);
+    row.appendChild(deleteButton);
+    item.appendChild(row);
+    savedChatsList.appendChild(item);
+  });
+}
+
+function deactivateChatMode() {
+  welcomeWrapper.classList.remove("hidden");
+  chatContainer.classList.remove("chat-active");
+  mainContent.classList.remove("chat-active");
+  inputContainer.classList.remove("fixed");
+}
+
+function renderConversationFromHistory() {
+  chatMessages.innerHTML = "";
+
+  const visibleMessages = conversationHistory.filter(
+    (entry) => entry.role === "user" || entry.role === "assistant"
+  );
+
+  if (visibleMessages.length === 0) {
+    deactivateChatMode();
+    return;
+  }
+
+  visibleMessages.forEach((entry) => addMessage(entry.content, entry.role, { skipScroll: true }));
+  scrollToBottom();
+}
+
+function loadChat(chatId) {
+  const chat = savedChats.find((entry) => entry.id === chatId);
+  if (!chat) return;
+
+  currentChatId = chat.id;
+  currentSessionId = chat.sessionId || generateSessionId();
+
+  const history = Array.isArray(chat.messages) && chat.messages.length > 0
+    ? chat.messages
+    : [createSystemMessage()];
+
+  resetConversationHistory(history);
+  renderConversationFromHistory();
+  renderSavedChats();
+}
+
+function startNewChat() {
+  currentChatId = null;
+  currentSessionId = generateSessionId();
+  resetConversationHistory();
+  chatMessages.innerHTML = "";
+  deactivateChatMode();
+  renderSavedChats();
+}
 
 // Send message function
 async function sendMessage() {
@@ -134,6 +354,7 @@ async function sendMessage() {
   // Add user message to chat and history
   addMessage(message, "user");
   conversationHistory.push({ role: "user", content: message });
+  syncCurrentChatToStorage();
   
   userInput.value = "";
   // Reset textarea height and button state immediately after sending
@@ -154,7 +375,11 @@ async function sendMessage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ messages: conversationHistory, sessionId }),
+      body: JSON.stringify({ 
+        messages: conversationHistory, 
+        sessionId: currentSessionId,
+        agent_reference: CONFIG.AGENT_REFERENCE
+      }),
     });
 
     const data = await response.json();
@@ -166,19 +391,26 @@ async function sendMessage() {
       const assistantMessage = data.message.content;
       addMessage(assistantMessage, "assistant");
       conversationHistory.push({ role: "assistant", content: assistantMessage });
+      syncCurrentChatToStorage();
     } else {
+      const fallbackMessage = data.error || "Desculpe, ocorreu um erro ao processar sua mensagem.";
       addMessage(
-        data.error || "Desculpe, ocorreu um erro ao processar sua mensagem.",
+        fallbackMessage,
         "assistant"
       );
+      conversationHistory.push({ role: "assistant", content: fallbackMessage });
+      syncCurrentChatToStorage();
     }
   } catch (error) {
     console.error("Error:", error);
     typingIndicator.remove();
+    const connectionErrorMessage = "Erro de conexão. Verifique se o servidor está rodando.";
     addMessage(
-      "Erro de conexão. Verifique se o servidor está rodando.",
+      connectionErrorMessage,
       "assistant"
     );
+    conversationHistory.push({ role: "assistant", content: connectionErrorMessage });
+    syncCurrentChatToStorage();
   }
 
   // Re-enable input
@@ -230,7 +462,9 @@ function scrollToBottom() {
 }
 
 // Add message to chat
-function addMessage(text, sender) {
+function addMessage(text, sender, options = {}) {
+  const { skipScroll = false } = options;
+
   // Activate chat mode on first message
   activateChatMode();
 
@@ -250,7 +484,7 @@ function addMessage(text, sender) {
       });
       messageDiv.innerHTML = marked.parse(text);
       
-      // Adicionar atributo download e classe especial para links de PDF
+      // Adicionar atributo download e classe especial para links de PDF/arquivos
       const links = messageDiv.querySelectorAll('a[href*="/api/download/"]');
       links.forEach(link => {
         // Extrair o nome do arquivo da URL
@@ -261,18 +495,81 @@ function addMessage(text, sender) {
         link.setAttribute('download', filename);
         link.classList.add('pdf-download');
         
-        // Prevenir navegação padrão, forçar download
+        // Prevenir navegação padrão, processar download via SAS URL
         link.addEventListener('click', (e) => {
           e.preventDefault();
           
-          // Criar elemento temporário para download
-          const downloadLink = document.createElement('a');
-          downloadLink.href = link.href;
-          downloadLink.download = filename;
-          downloadLink.style.display = 'none';
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          document.body.removeChild(downloadLink);
+          console.log('📥 Iniciando download:', {
+            url: link.href,
+            filename: filename
+          });
+          
+          // ETAPA 1: Buscar SAS URL do backend
+          fetch(link.href)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`Erro ao buscar URL: ${response.status} ${response.statusText}`);
+              }
+              return response.json();
+            })
+            .then(data => {
+              // ETAPA 2: Validar resposta do backend
+              if (!data.success || !data.download_url) {
+                throw new Error('Resposta inválida do servidor: SAS URL não fornecida');
+              }
+              
+              console.log('✅ SAS URL obtida:', {
+                filename: data.filename,
+                expires_in_hours: data.expires_in_hours
+              });
+              
+              // ETAPA 3: Fazer download direto da SAS URL
+              return fetch(data.download_url);
+            })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`Erro ao baixar arquivo: ${response.status} ${response.statusText}`);
+              }
+              
+              // Verificar se o arquivo não está vazio
+              const contentLength = response.headers.get('content-length');
+              if (contentLength === '0') {
+                throw new Error('Arquivo vazio no storage');
+              }
+              
+              return response.blob();
+            })
+            .then(blob => {
+              // Validar blob
+              if (!blob || blob.size === 0) {
+                throw new Error('Blob vazio recebido');
+              }
+              
+              console.log('✅ Download completo:', {
+                filename: filename,
+                size: blob.size,
+                type: blob.type
+              });
+              
+              // Criar URL do blob e fazer download
+              const blobUrl = window.URL.createObjectURL(blob);
+              const downloadLink = document.createElement('a');
+              downloadLink.href = blobUrl;
+              downloadLink.download = filename;
+              downloadLink.style.display = 'none';
+              document.body.appendChild(downloadLink);
+              downloadLink.click();
+              
+              // Limpar recursos
+              setTimeout(() => {
+                document.body.removeChild(downloadLink);
+                window.URL.revokeObjectURL(blobUrl);
+              }, 100);
+            })
+            .catch(error => {
+              console.error('❌ Erro ao baixar arquivo:', error);
+              alert(`❌ Erro ao baixar arquivo:\n\n${error.message}\n\nTente novamente ou solicite ao administrador.`);
+            });
         });
       });
     } else {
@@ -290,7 +587,9 @@ function addMessage(text, sender) {
   chatMessages.appendChild(messageDiv);
 
   // Scroll to bottom with smooth animation
-  scrollToBottom();
+  if (!skipScroll) {
+    scrollToBottom();
+  }
 }
 
 // Show typing indicator
@@ -308,6 +607,14 @@ function showTypingIndicator() {
 }
 // Event Listeners
 sendBtn.addEventListener("click", sendMessage);
+
+if (newChatBtn) {
+  newChatBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    startNewChat();
+    closeSidebar();
+  });
+}
 
 userInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
