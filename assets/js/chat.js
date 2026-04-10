@@ -291,6 +291,9 @@ function renderSavedChats() {
     item.appendChild(row);
     savedChatsList.appendChild(item);
   });
+  
+  // Atualizar visibilidade do botão de expandir
+  updateExpandButton();
 }
 
 function deactivateChatMode() {
@@ -622,6 +625,35 @@ userInput.addEventListener("keydown", (e) => {
     sendMessage();
   }
 });
+
+// Expand/Collapse saved chats functionality
+function updateExpandButton() {
+  const expandBtn = document.getElementById("expandChatsBtn");
+  const expandText = document.getElementById("expandChatsText");
+  
+  if (!expandBtn || !expandText) return;
+  
+  // Mostrar botão apenas se há mais de 6 chats
+  if (savedChats.length > 6) {
+    expandBtn.style.display = "flex";
+    
+    // Checar se está expandido
+    const isExpanded = !savedChatsList.classList.contains("collapsed");
+    expandText.textContent = isExpanded ? "Ver menos" : "Ver mais";
+  } else {
+    expandBtn.style.display = "none";
+  }
+}
+
+// Event listener para o botão de expandir
+const expandChatsBtn = document.getElementById("expandChatsBtn");
+if (expandChatsBtn) {
+  expandChatsBtn.addEventListener("click", () => {
+    savedChatsList.classList.toggle("collapsed");
+    expandChatsBtn.classList.toggle("expanded");
+    updateExpandButton();
+  });
+}
 
 // Auto-resize textarea
 userInput.addEventListener("input", () => {

@@ -69,9 +69,16 @@
 
             <section class="saved-chats-section" aria-label="Seus chats">
                 <h3 class="saved-chats-title">Seus chats</h3>
-                <ul class="saved-chats-list" id="savedChatsList">
+                <ul class="saved-chats-list collapsed" id="savedChatsList">
                     <li class="saved-chat-empty">Nenhum chat salvo ainda</li>
                 </ul>
+                <button class="expand-chats-btn" id="expandChatsBtn" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <span id="expandChatsText">Ver mais</span>
+                </button>
             </section>
         </nav>
     </aside>
