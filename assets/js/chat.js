@@ -211,7 +211,7 @@ function deleteChat(chatId) {
   const chat = savedChats.find((entry) => entry.id === chatId);
   if (!chat) return;
 
-  const confirmed = window.confirm(`Deseja excluir a conversa \"${chat.title || "Novo chat"}\"?`);
+  const confirmed = window.confirm(`Deseja excluir a conversa "${chat.title || "Novo chat"}"?`);
   if (!confirmed) return;
 
   savedChats = savedChats.filter((entry) => entry.id !== chatId);
@@ -440,11 +440,6 @@ function activateChatMode() {
   }
 }
 
-// Ensure messages area has enough bottom padding so last message is not hidden
-function updateMessagesPadding() {
-  // No longer needed - using fixed padding-bottom on main-content
-}
-
 // Scroll to latest message - scroll window/body so last message is visible above input
 function scrollToBottom() {
   const last = chatMessages.lastElementChild;
@@ -498,82 +493,44 @@ function addMessage(text, sender, options = {}) {
         link.setAttribute('download', filename);
         link.classList.add('pdf-download');
         
-        // Prevenir navegação padrão, processar download via SAS URL
+        // --- CÓDIGO CORRIGIDO AQUI: Fluxo de Download Seguro contra CORS ---
         link.addEventListener('click', (e) => {
           e.preventDefault();
           
-          console.log('📥 Iniciando download:', {
-            url: link.href,
-            filename: filename
-          });
+          console.log('📥 Solicitando link seguro para:', filename);
           
-          // ETAPA 1: Buscar SAS URL do backend
-          fetch(link.href)
+          // ETAPA 1: Buscar SAS URL do backend apontando para API_URL
+          fetch(`${API_URL}/download/${encodeURIComponent(filename)}`)
             .then(response => {
               if (!response.ok) {
-                throw new Error(`Erro ao buscar URL: ${response.status} ${response.statusText}`);
+                throw new Error(`Erro no servidor: ${response.status}`);
               }
               return response.json();
             })
             .then(data => {
               // ETAPA 2: Validar resposta do backend
               if (!data.success || !data.download_url) {
-                throw new Error('Resposta inválida do servidor: SAS URL não fornecida');
+                throw new Error('Link SAS não fornecido pelo servidor.');
               }
               
-              console.log('✅ SAS URL obtida:', {
-                filename: data.filename,
-                expires_in_hours: data.expires_in_hours
-              });
+              console.log('✅ Link autorizado recebido. Abrindo janela de download...');
               
-              // ETAPA 3: Fazer download direto da SAS URL
-              return fetch(data.download_url);
-            })
-            .then(response => {
-              if (!response.ok) {
-                throw new Error(`Erro ao baixar arquivo: ${response.status} ${response.statusText}`);
-              }
-              
-              // Verificar se o arquivo não está vazio
-              const contentLength = response.headers.get('content-length');
-              if (contentLength === '0') {
-                throw new Error('Arquivo vazio no storage');
-              }
-              
-              return response.blob();
-            })
-            .then(blob => {
-              // Validar blob
-              if (!blob || blob.size === 0) {
-                throw new Error('Blob vazio recebido');
-              }
-              
-              console.log('✅ Download completo:', {
-                filename: filename,
-                size: blob.size,
-                type: blob.type
-              });
-              
-              // Criar URL do blob e fazer download
-              const blobUrl = window.URL.createObjectURL(blob);
+              // ETAPA 3: Deixar o navegador baixar o link silenciosamente
               const downloadLink = document.createElement('a');
-              downloadLink.href = blobUrl;
+              downloadLink.href = data.download_url;
+              downloadLink.target = '_blank'; 
               downloadLink.download = filename;
-              downloadLink.style.display = 'none';
               document.body.appendChild(downloadLink);
               downloadLink.click();
+              document.body.removeChild(downloadLink);
               
-              // Limpar recursos
-              setTimeout(() => {
-                document.body.removeChild(downloadLink);
-                window.URL.revokeObjectURL(blobUrl);
-              }, 100);
             })
             .catch(error => {
               console.error('❌ Erro ao baixar arquivo:', error);
-              alert(`❌ Erro ao baixar arquivo:\n\n${error.message}\n\nTente novamente ou solicite ao administrador.`);
+              alert(`❌ Erro ao baixar arquivo:\n\n${error.message}\n\nVerifique se o backend está rodando.`);
             });
         });
+        // --- FIM DO CÓDIGO CORRIGIDO ---
       });
     } else {
       console.warn('Marked.js não encontrado, usando texto simples');
@@ -682,4 +639,3 @@ userInput.addEventListener("paste", () => {
     }
   }, 10);
 });
-// When textarea resizes, adjust messages padding so nothing is hidden
