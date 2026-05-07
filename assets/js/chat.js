@@ -1,4 +1,5 @@
 import CONFIG from './config.js';
+import authManager from './modules/auth.js';
 
 // API Configuration
 const API_URL = CONFIG?.API_URL || "http://localhost:3000/api";
@@ -31,17 +32,7 @@ const loginBtn = document.getElementById("loginBtn");
 const closeModal = document.getElementById("closeModal");
 const microsoftLoginBtn = document.getElementById("microsoftLoginBtn");
 
-// URL de login Microsoft (Azure AD)
-const MICROSOFT_LOGIN_URL =
-  "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?" +
-  "client_id=SEU_CLIENT_ID&" +
-  "response_type=code&" +
-  "redirect_uri=" +
-  encodeURIComponent(window.location.origin) +
-  "&" +
-  "scope=openid%20profile%20email";
-
-// Modal Functions
+// Função de login - usa authManager agora
 function openLoginModal() {
   loginModal.classList.add("active");
 }
@@ -51,8 +42,7 @@ function closeLoginModal() {
 }
 
 function redirectToMicrosoftLogin() {
-  // Redirecionar para página de login Microsoft
-  window.location.href = MICROSOFT_LOGIN_URL;
+  authManager.login();
 }
 
 // Login Modal Event Listeners
@@ -108,6 +98,10 @@ const SYSTEM_PROMPT = "Você é um assistente virtual prestativo. Responda de fo
 
 // Verificar se marked.js foi carregado
 window.addEventListener('DOMContentLoaded', () => {
+  // Autenticação Microsoft
+  authManager.loadStoredToken();
+  authManager.handleAuthCallback();
+
   if (typeof marked === 'undefined') {
     console.error('❌ Marked.js NÃO foi carregado! Formatação Markdown não funcionará.');
   } else {
@@ -373,11 +367,19 @@ async function sendMessage() {
   const typingIndicator = showTypingIndicator();
 
   try {
+    // Preparar headers
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    
+    // Adicionar token de autenticação se disponível
+    if (authManager.isLoggedIn()) {
+      headers["Authorization"] = `Bearer ${authManager.getToken()}`;
+    }
+
     const response = await fetch(`${API_URL}/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: headers,
       body: JSON.stringify({ 
         messages: conversationHistory, 
         sessionId: currentSessionId,
