@@ -26,7 +26,7 @@
 
 /* Main Content Chat State */
 .main-content.chat-active {
-  justify-content: 0-start;
+  justify-content: flex-start;
   padding-bottom: 200px;
 }
 
@@ -56,6 +56,9 @@
   font-size: 0.95rem;
   line-height: 1.6;
   animation: fadeIn 0.3s ease;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 @keyframes fadeIn {
@@ -188,6 +191,9 @@
   font-weight: 500;
   border: 1px solid #d0e7ff;
   transition: all 0.2s ease;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .message.assistant a.pdf-download:hover {
@@ -205,13 +211,15 @@
   font-weight: 600;
 }
 
-
-/* Input Container */
+/* Input Container (Estado Inicial: no meio da tela) */
 .input-container {
   width: 100%;
   max-width: 800px;
   position: relative;
   padding: 0;
+  margin: 0 auto; 
+  display: flex;
+  justify-content: center;
 }
 
 .input-wrapper {
@@ -220,6 +228,7 @@
   max-width: 800px;
 }
 
+/* Input Container (Estado Chat: grudado no fundo) */
 .input-container.fixed {
   position: fixed;
   bottom: 0;
@@ -229,7 +238,7 @@
   max-width: 100%;
   padding: 20px;
   z-index: 100;
-  background: linear-gradient(to top, var(--background-gray) 85%, transparent);
+  background: linear-gradient(to top, var(--background-gray, #f0f2f5) 85%, transparent);
   display: flex;
   justify-content: center;
   transition: left 0.3s ease, width 0.3s ease;

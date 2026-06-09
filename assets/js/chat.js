@@ -32,7 +32,7 @@ const loginBtn = document.getElementById("loginBtn");
 const closeModal = document.getElementById("closeModal");
 const microsoftLoginBtn = document.getElementById("microsoftLoginBtn");
 
-// Função de login - usa authManager agora
+// Função de login
 function openLoginModal() {
   loginModal.classList.add("active");
 }
@@ -98,7 +98,6 @@ const SYSTEM_PROMPT = "Você é um assistente virtual prestativo. Responda de fo
 
 // Verificar se marked.js foi carregado
 window.addEventListener('DOMContentLoaded', () => {
-  // Autenticação Microsoft
   authManager.loadStoredToken();
   authManager.handleAuthCallback();
 
@@ -112,7 +111,6 @@ window.addEventListener('DOMContentLoaded', () => {
   startNewChat();
 });
 
-// Conversation history for Azure OpenAI
 const conversationHistory = [{ role: "system", content: SYSTEM_PROMPT }];
 let savedChats = [];
 let currentChatId = null;
@@ -135,7 +133,7 @@ function persistSavedChats() {
   try {
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(savedChats));
   } catch (error) {
-    console.error("Erro ao salvar chats no localStorage:", error);
+    console.error("Erro ao salvar chats:", error);
   }
 }
 
@@ -146,10 +144,9 @@ function loadSavedChats() {
     savedChats = Array.isArray(parsed) ? parsed : [];
     savedChats.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   } catch (error) {
-    console.error("Erro ao carregar chats salvos:", error);
+    console.error("Erro ao carregar chats:", error);
     savedChats = [];
   }
-
   renderSavedChats();
 }
 
@@ -286,7 +283,6 @@ function renderSavedChats() {
     savedChatsList.appendChild(item);
   });
   
-  // Atualizar visibilidade do botão de expandir
   updateExpandButton();
 }
 
@@ -294,7 +290,7 @@ function deactivateChatMode() {
   welcomeWrapper.classList.remove("hidden");
   chatContainer.classList.remove("chat-active");
   mainContent.classList.remove("chat-active");
-  inputContainer.classList.remove("fixed");
+  inputContainer.classList.remove("fixed"); // RETORNA O INPUT PARA O MEIO DA TELA
 }
 
 function renderConversationFromHistory() {
@@ -338,41 +334,28 @@ function startNewChat() {
   renderSavedChats();
 }
 
-// Send message function
 async function sendMessage() {
   const message = userInput.value.trim();
-
   if (!message) return;
 
-  // Disable input while processing
   userInput.disabled = true;
   sendBtn.disabled = true;
 
-  // Add user message to chat and history
   addMessage(message, "user");
   conversationHistory.push({ role: "user", content: message });
   syncCurrentChatToStorage();
   
   userInput.value = "";
-  // Reset textarea height and button state immediately after sending
   try {
     userInput.style.height = "52px";
     userInput.scrollTop = 0;
     sendBtn.classList.remove("has-text");
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
-  // Show typing indicator
   const typingIndicator = showTypingIndicator();
 
   try {
-    // Preparar headers
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    
-    // Adicionar token de autenticação se disponível
+    const headers = { "Content-Type": "application/json" };
     if (authManager.isLoggedIn()) {
       headers["Authorization"] = `Bearer ${authManager.getToken()}`;
     }
@@ -388,8 +371,6 @@ async function sendMessage() {
     });
 
     const data = await response.json();
-
-    // Remove typing indicator
     typingIndicator.remove();
 
     if (response.ok && data.message) {
@@ -399,10 +380,7 @@ async function sendMessage() {
       syncCurrentChatToStorage();
     } else {
       const fallbackMessage = data.error || "Desculpe, ocorreu um erro ao processar sua mensagem.";
-      addMessage(
-        fallbackMessage,
-        "assistant"
-      );
+      addMessage(fallbackMessage, "assistant");
       conversationHistory.push({ role: "assistant", content: fallbackMessage });
       syncCurrentChatToStorage();
     }
@@ -410,48 +388,37 @@ async function sendMessage() {
     console.error("Error:", error);
     typingIndicator.remove();
     const connectionErrorMessage = "Erro de conexão. Verifique se o servidor está rodando.";
-    addMessage(
-      connectionErrorMessage,
-      "assistant"
-    );
+    addMessage(connectionErrorMessage, "assistant");
     conversationHistory.push({ role: "assistant", content: connectionErrorMessage });
     syncCurrentChatToStorage();
   }
 
-  // Re-enable input
   userInput.disabled = false;
   sendBtn.disabled = false;
   userInput.focus();
-  // Reset textarea height and scroll to default after sending
   try {
     userInput.style.height = "52px";
     userInput.scrollTop = 0;
     sendBtn.classList.remove("has-text");
-  } catch (e) {
-    // ignore if DOM not available
-  }
+  } catch (e) {}
 }
 
-// Hide welcome and activate chat mode
 function activateChatMode() {
   if (welcomeWrapper && !welcomeWrapper.classList.contains("hidden")) {
     welcomeWrapper.classList.add("hidden");
     chatContainer.classList.add("chat-active");
     mainContent.classList.add("chat-active");
-    inputContainer.classList.add("fixed");
+    inputContainer.classList.add("fixed"); // FIXA O INPUT NO RODAPÉ
   }
 }
 
-// Scroll to latest message - scroll window/body so last message is visible above input
 function scrollToBottom() {
   const last = chatMessages.lastElementChild;
   if (last) {
     setTimeout(() => {
       try {
-        // Scroll window so the last message is in view, positioned at top of visible area
         last.scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) {
-        // fallback: scroll to bottom of page
         window.scrollTo({
           top: document.body.scrollHeight,
           behavior: "smooth",
@@ -461,63 +428,41 @@ function scrollToBottom() {
   }
 }
 
-// Add message to chat
 function addMessage(text, sender, options = {}) {
   const { skipScroll = false } = options;
 
-  // Activate chat mode on first message
   activateChatMode();
 
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${sender}`;
   
-  // Se for assistente, renderizar Markdown; se for usuário, texto simples
   if (sender === "assistant") {
-    // Verificar se marked está disponível
     if (typeof marked !== 'undefined') {
-      // Configurar marked para segurança e formatação
       marked.setOptions({
-        breaks: true,        // Quebras de linha viram <br>
-        gfm: true,          // GitHub Flavored Markdown
-        headerIds: false,   // Não gerar IDs nos headers
-        mangle: false       // Não codificar emails
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
       });
       messageDiv.innerHTML = marked.parse(text);
       
-      // Adicionar atributo download e classe especial para links de PDF/arquivos
       const links = messageDiv.querySelectorAll('a[href*="/api/download/"]');
       links.forEach(link => {
-        // Extrair o nome do arquivo da URL
         const url = new URL(link.href, window.location.origin);
         const filename = decodeURIComponent(url.pathname.split('/').pop());
         
-        // Adicionar atributo download e classe especial
         link.setAttribute('download', filename);
         link.classList.add('pdf-download');
         
-        // --- CÓDIGO CORRIGIDO AQUI: Fluxo de Download Seguro contra CORS ---
         link.addEventListener('click', (e) => {
           e.preventDefault();
-          
-          console.log('📥 Solicitando link seguro para:', filename);
-          
-          // ETAPA 1: Buscar SAS URL do backend apontando para API_URL
           fetch(`${API_URL}/download/${encodeURIComponent(filename)}`)
             .then(response => {
-              if (!response.ok) {
-                throw new Error(`Erro no servidor: ${response.status}`);
-              }
+              if (!response.ok) throw new Error(`Erro no servidor: ${response.status}`);
               return response.json();
             })
             .then(data => {
-              // ETAPA 2: Validar resposta do backend
-              if (!data.success || !data.download_url) {
-                throw new Error('Link SAS não fornecido pelo servidor.');
-              }
-              
-              console.log('✅ Link autorizado recebido. Abrindo janela de download...');
-              
-              // ETAPA 3: Deixar o navegador baixar o link silenciosamente
+              if (!data.success || !data.download_url) throw new Error('Link SAS não fornecido.');
               const downloadLink = document.createElement('a');
               downloadLink.href = data.download_url;
               downloadLink.target = '_blank'; 
@@ -525,21 +470,15 @@ function addMessage(text, sender, options = {}) {
               document.body.appendChild(downloadLink);
               downloadLink.click();
               document.body.removeChild(downloadLink);
-              
             })
             .catch(error => {
-              console.error('❌ Erro ao baixar arquivo:', error);
-              alert(`❌ Erro ao baixar arquivo:\n\n${error.message}\n\nVerifique se o backend está rodando.`);
+              console.error('❌ Erro ao baixar:', error);
+              alert(`❌ Erro ao baixar arquivo:\n\n${error.message}`);
             });
         });
-        // --- FIM DO CÓDIGO CORRIGIDO ---
       });
     } else {
-      console.warn('Marked.js não encontrado, usando texto simples');
-      // Fallback: pelo menos renderizar quebras de linha e negrito básico
-      const formattedText = text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>');
+      const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
       messageDiv.innerHTML = formattedText;
     }
   } else {
@@ -548,13 +487,9 @@ function addMessage(text, sender, options = {}) {
   
   chatMessages.appendChild(messageDiv);
 
-  // Scroll to bottom with smooth animation
-  if (!skipScroll) {
-    scrollToBottom();
-  }
+  if (!skipScroll) scrollToBottom();
 }
 
-// Show typing indicator
 function showTypingIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "typing-indicator";
@@ -567,7 +502,7 @@ function showTypingIndicator() {
   scrollToBottom();
   return indicator;
 }
-// Event Listeners
+
 sendBtn.addEventListener("click", sendMessage);
 
 if (newChatBtn) {
@@ -585,18 +520,14 @@ userInput.addEventListener("keydown", (e) => {
   }
 });
 
-// Expand/Collapse saved chats functionality
 function updateExpandButton() {
   const expandBtn = document.getElementById("expandChatsBtn");
   const expandText = document.getElementById("expandChatsText");
   
   if (!expandBtn || !expandText) return;
   
-  // Mostrar botão apenas se há mais de 6 chats
   if (savedChats.length > 6) {
     expandBtn.style.display = "flex";
-    
-    // Checar se está expandido
     const isExpanded = !savedChatsList.classList.contains("collapsed");
     expandText.textContent = isExpanded ? "Ver menos" : "Ver mais";
   } else {
@@ -604,7 +535,6 @@ function updateExpandButton() {
   }
 }
 
-// Event listener para o botão de expandir
 const expandChatsBtn = document.getElementById("expandChatsBtn");
 if (expandChatsBtn) {
   expandChatsBtn.addEventListener("click", () => {
@@ -614,28 +544,21 @@ if (expandChatsBtn) {
   });
 }
 
-// Auto-resize textarea
 userInput.addEventListener("input", () => {
   userInput.style.height = "auto";
   userInput.style.height = Math.min(userInput.scrollHeight, 200) + "px";
 
-  // Controlar posição do botão de enviar
   if (userInput.value.trim()) {
     sendBtn.classList.add("has-text");
   } else {
     sendBtn.classList.remove("has-text");
   }
-
-  // Manter scroll no início do texto
   userInput.scrollTop = 0;
 });
 
-// Também verificar ao colar texto
 userInput.addEventListener("paste", () => {
   setTimeout(() => {
     userInput.scrollTop = 0;
-
-    // Controlar posição do botão após colar
     if (userInput.value.trim()) {
       sendBtn.classList.add("has-text");
     }
