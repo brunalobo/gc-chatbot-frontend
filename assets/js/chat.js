@@ -32,7 +32,6 @@ const loginBtn = document.getElementById("loginBtn");
 const closeModal = document.getElementById("closeModal");
 const microsoftLoginBtn = document.getElementById("microsoftLoginBtn");
 
-// Função de login
 function openLoginModal() {
   loginModal.classList.add("active");
 }
@@ -45,29 +44,15 @@ function redirectToMicrosoftLogin() {
   authManager.login();
 }
 
-// Login Modal Event Listeners
-if (loginBtn) {
-  loginBtn.addEventListener("click", openLoginModal);
-}
-
-if (closeModal) {
-  closeModal.addEventListener("click", closeLoginModal);
-}
-
-if (microsoftLoginBtn) {
-  microsoftLoginBtn.addEventListener("click", redirectToMicrosoftLogin);
-}
-
-// Fechar modal ao clicar fora
+if (loginBtn) loginBtn.addEventListener("click", openLoginModal);
+if (closeModal) closeModal.addEventListener("click", closeLoginModal);
+if (microsoftLoginBtn) microsoftLoginBtn.addEventListener("click", redirectToMicrosoftLogin);
 if (loginModal) {
   loginModal.addEventListener("click", (e) => {
-    if (e.target === loginModal) {
-      closeLoginModal();
-    }
+    if (e.target === loginModal) closeLoginModal();
   });
 }
 
-// Sidebar Functions
 function openSidebar() {
   sidebar.classList.add("open");
   sidebarOverlay.classList.add("active");
@@ -88,7 +73,6 @@ function closeSidebar() {
   headerLogo.classList.remove("hidden");
 }
 
-// Sidebar Event Listeners
 menuBtn.addEventListener("click", openSidebar);
 sidebarClose.addEventListener("click", closeSidebar);
 sidebarOverlay.addEventListener("click", closeSidebar);
@@ -96,15 +80,12 @@ sidebarOverlay.addEventListener("click", closeSidebar);
 const CHAT_STORAGE_KEY = "gc_saved_chats_v1";
 const SYSTEM_PROMPT = "Você é um assistente virtual prestativo. Responda de forma clara e concisa em português.";
 
-// Verificar se marked.js foi carregado
 window.addEventListener('DOMContentLoaded', () => {
   authManager.loadStoredToken();
   authManager.handleAuthCallback();
 
   if (typeof marked === 'undefined') {
     console.error('❌ Marked.js NÃO foi carregado! Formatação Markdown não funcionará.');
-  } else {
-    console.log('✅ Marked.js carregado com sucesso!');
   }
 
   loadSavedChats();
@@ -144,7 +125,6 @@ function loadSavedChats() {
     savedChats = Array.isArray(parsed) ? parsed : [];
     savedChats.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   } catch (error) {
-    console.error("Erro ao carregar chats:", error);
     savedChats = [];
   }
   renderSavedChats();
@@ -175,9 +155,7 @@ function syncCurrentChatToStorage() {
 
   currentChatId = snapshot.id;
   const existingIndex = savedChats.findIndex((entry) => entry.id === snapshot.id);
-  if (existingIndex !== -1) {
-    savedChats.splice(existingIndex, 1);
-  }
+  if (existingIndex !== -1) savedChats.splice(existingIndex, 1);
 
   savedChats.unshift(snapshot);
   persistSavedChats();
@@ -186,22 +164,14 @@ function syncCurrentChatToStorage() {
 
 function formatChatDate(isoDate) {
   if (!isoDate) return "";
-
   const parsed = new Date(isoDate);
   if (Number.isNaN(parsed.getTime())) return "";
-
-  return parsed.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  return parsed.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function deleteChat(chatId) {
   const chat = savedChats.find((entry) => entry.id === chatId);
   if (!chat) return;
-
   const confirmed = window.confirm(`Deseja excluir a conversa "${chat.title || "Novo chat"}"?`);
   if (!confirmed) return;
 
@@ -209,20 +179,15 @@ function deleteChat(chatId) {
   persistSavedChats();
 
   if (currentChatId === chatId) {
-    if (savedChats.length > 0) {
-      loadChat(savedChats[0].id);
-    } else {
-      startNewChat();
-    }
+    if (savedChats.length > 0) loadChat(savedChats[0].id);
+    else startNewChat();
     return;
   }
-
   renderSavedChats();
 }
 
 function renderSavedChats() {
   if (!savedChatsList) return;
-
   savedChatsList.innerHTML = "";
   if (savedChats.length === 0) {
     const emptyItem = document.createElement("li");
@@ -240,9 +205,7 @@ function renderSavedChats() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "saved-chat-item";
-    if (chat.id === currentChatId) {
-      button.classList.add("active");
-    }
+    if (chat.id === currentChatId) button.classList.add("active");
 
     const name = document.createElement("span");
     name.className = "saved-chat-name";
@@ -262,15 +225,8 @@ function renderSavedChats() {
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "saved-chat-delete";
-    deleteButton.setAttribute("aria-label", `Excluir conversa ${chat.title || "Novo chat"}`);
     deleteButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 6h18"></path>
-        <path d="M8 6V4h8v2"></path>
-        <path d="M19 6l-1 14H6L5 6"></path>
-        <path d="M10 11v6"></path>
-        <path d="M14 11v6"></path>
-      </svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
     `;
     deleteButton.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -286,25 +242,37 @@ function renderSavedChats() {
   updateExpandButton();
 }
 
+// 🔥 SEGREDO 1: Ao voltar para o menu, a caixa volta a ter 3 linhas
 function deactivateChatMode() {
   welcomeWrapper.classList.remove("hidden");
   chatContainer.classList.remove("chat-active");
   mainContent.classList.remove("chat-active");
-  inputContainer.classList.remove("fixed"); // RETORNA O INPUT PARA O MEIO DA TELA
+  inputContainer.classList.remove("fixed");
+  if (userInput) {
+    userInput.setAttribute("rows", "3");
+  }
+}
+
+// 🔥 SEGREDO 2: Ao descer para o rodapé, a caixa é esmagada para 1 linha
+function activateChatMode() {
+  if (welcomeWrapper && !welcomeWrapper.classList.contains("hidden")) {
+    welcomeWrapper.classList.add("hidden");
+    chatContainer.classList.add("chat-active");
+    mainContent.classList.add("chat-active");
+    inputContainer.classList.add("fixed");
+    if (userInput) {
+      userInput.setAttribute("rows", "1");
+    }
+  }
 }
 
 function renderConversationFromHistory() {
   chatMessages.innerHTML = "";
-
-  const visibleMessages = conversationHistory.filter(
-    (entry) => entry.role === "user" || entry.role === "assistant"
-  );
-
+  const visibleMessages = conversationHistory.filter((entry) => entry.role === "user" || entry.role === "assistant");
   if (visibleMessages.length === 0) {
     deactivateChatMode();
     return;
   }
-
   visibleMessages.forEach((entry) => addMessage(entry.content, entry.role, { skipScroll: true }));
   scrollToBottom();
 }
@@ -316,10 +284,7 @@ function loadChat(chatId) {
   currentChatId = chat.id;
   currentSessionId = chat.sessionId || generateSessionId();
 
-  const history = Array.isArray(chat.messages) && chat.messages.length > 0
-    ? chat.messages
-    : [createSystemMessage()];
-
+  const history = Array.isArray(chat.messages) && chat.messages.length > 0 ? chat.messages : [createSystemMessage()];
   resetConversationHistory(history);
   renderConversationFromHistory();
   renderSavedChats();
@@ -332,6 +297,12 @@ function startNewChat() {
   chatMessages.innerHTML = "";
   deactivateChatMode();
   renderSavedChats();
+
+  if (userInput) {
+    userInput.value = "";
+    userInput.style.height = "";
+    if (sendBtn) sendBtn.classList.remove("has-text");
+  }
 }
 
 async function sendMessage() {
@@ -347,7 +318,7 @@ async function sendMessage() {
   
   userInput.value = "";
   try {
-    userInput.style.height = "52px";
+    userInput.style.height = ""; 
     userInput.scrollTop = 0;
     sendBtn.classList.remove("has-text");
   } catch (e) {}
@@ -356,9 +327,7 @@ async function sendMessage() {
 
   try {
     const headers = { "Content-Type": "application/json" };
-    if (authManager.isLoggedIn()) {
-      headers["Authorization"] = `Bearer ${authManager.getToken()}`;
-    }
+    if (authManager.isLoggedIn()) headers["Authorization"] = `Bearer ${authManager.getToken()}`;
 
     const response = await fetch(`${API_URL}/chat`, {
       method: "POST",
@@ -385,7 +354,6 @@ async function sendMessage() {
       syncCurrentChatToStorage();
     }
   } catch (error) {
-    console.error("Error:", error);
     typingIndicator.remove();
     const connectionErrorMessage = "Erro de conexão. Verifique se o servidor está rodando.";
     addMessage(connectionErrorMessage, "assistant");
@@ -397,40 +365,24 @@ async function sendMessage() {
   sendBtn.disabled = false;
   userInput.focus();
   try {
-    userInput.style.height = "52px";
+    userInput.style.height = ""; 
     userInput.scrollTop = 0;
     sendBtn.classList.remove("has-text");
   } catch (e) {}
-}
-
-function activateChatMode() {
-  if (welcomeWrapper && !welcomeWrapper.classList.contains("hidden")) {
-    welcomeWrapper.classList.add("hidden");
-    chatContainer.classList.add("chat-active");
-    mainContent.classList.add("chat-active");
-    inputContainer.classList.add("fixed"); // FIXA O INPUT NO RODAPÉ
-  }
 }
 
 function scrollToBottom() {
   const last = chatMessages.lastElementChild;
   if (last) {
     setTimeout(() => {
-      try {
-        last.scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (e) {
-        window.scrollTo({
-          top: document.body.scrollHeight,
-          behavior: "smooth",
-        });
-      }
+      try { last.scrollIntoView({ behavior: "smooth", block: "start" }); } 
+      catch (e) { window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }
     }, 50);
   }
 }
 
 function addMessage(text, sender, options = {}) {
   const { skipScroll = false } = options;
-
   activateChatMode();
 
   const messageDiv = document.createElement("div");
@@ -438,12 +390,7 @@ function addMessage(text, sender, options = {}) {
   
   if (sender === "assistant") {
     if (typeof marked !== 'undefined') {
-      marked.setOptions({
-        breaks: true,
-        gfm: true,
-        headerIds: false,
-        mangle: false
-      });
+      marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
       messageDiv.innerHTML = marked.parse(text);
       
       const links = messageDiv.querySelectorAll('a[href*="/api/download/"]');
@@ -458,11 +405,11 @@ function addMessage(text, sender, options = {}) {
           e.preventDefault();
           fetch(`${API_URL}/download/${encodeURIComponent(filename)}`)
             .then(response => {
-              if (!response.ok) throw new Error(`Erro no servidor: ${response.status}`);
+              if (!response.ok) throw new Error(`Erro no servidor`);
               return response.json();
             })
             .then(data => {
-              if (!data.success || !data.download_url) throw new Error('Link SAS não fornecido.');
+              if (!data.success || !data.download_url) throw new Error('Link não fornecido.');
               const downloadLink = document.createElement('a');
               downloadLink.href = data.download_url;
               downloadLink.target = '_blank'; 
@@ -471,33 +418,24 @@ function addMessage(text, sender, options = {}) {
               downloadLink.click();
               document.body.removeChild(downloadLink);
             })
-            .catch(error => {
-              console.error('❌ Erro ao baixar:', error);
-              alert(`❌ Erro ao baixar arquivo:\n\n${error.message}`);
-            });
+            .catch(error => { alert(`❌ Erro ao baixar:\n\n${error.message}`); });
         });
       });
     } else {
-      const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-      messageDiv.innerHTML = formattedText;
+      messageDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
     }
   } else {
     messageDiv.textContent = text;
   }
   
   chatMessages.appendChild(messageDiv);
-
   if (!skipScroll) scrollToBottom();
 }
 
 function showTypingIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "typing-indicator";
-  indicator.innerHTML = `
-    <div class="typing-dots">
-      <span></span><span></span><span></span>
-    </div>
-  `;
+  indicator.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
   chatMessages.appendChild(indicator);
   scrollToBottom();
   return indicator;
@@ -523,13 +461,11 @@ userInput.addEventListener("keydown", (e) => {
 function updateExpandButton() {
   const expandBtn = document.getElementById("expandChatsBtn");
   const expandText = document.getElementById("expandChatsText");
-  
   if (!expandBtn || !expandText) return;
   
   if (savedChats.length > 6) {
     expandBtn.style.display = "flex";
-    const isExpanded = !savedChatsList.classList.contains("collapsed");
-    expandText.textContent = isExpanded ? "Ver menos" : "Ver mais";
+    expandText.textContent = !savedChatsList.classList.contains("collapsed") ? "Ver menos" : "Ver mais";
   } else {
     expandBtn.style.display = "none";
   }
@@ -544,14 +480,18 @@ if (expandChatsBtn) {
   });
 }
 
+// 🔥 SEGREDO 3: Medição limpa que impede o pulo no primeiro caractere digitado 🔥
 userInput.addEventListener("input", () => {
-  userInput.style.height = "auto";
-  userInput.style.height = Math.min(userInput.scrollHeight, 200) + "px";
-
-  if (userInput.value.trim()) {
-    sendBtn.classList.add("has-text");
-  } else {
+  // Limpa a altura forçada primeiro para poder medir apenas o conteúdo real
+  userInput.style.height = "auto"; 
+  
+  if (userInput.value === "") {
+    userInput.style.height = ""; 
     sendBtn.classList.remove("has-text");
+  } else {
+    // Expande apenas se houver muito texto, limitando a 200px
+    userInput.style.height = Math.min(userInput.scrollHeight, 200) + "px";
+    sendBtn.classList.add("has-text");
   }
   userInput.scrollTop = 0;
 });
@@ -559,8 +499,6 @@ userInput.addEventListener("input", () => {
 userInput.addEventListener("paste", () => {
   setTimeout(() => {
     userInput.scrollTop = 0;
-    if (userInput.value.trim()) {
-      sendBtn.classList.add("has-text");
-    }
+    if (userInput.value.trim()) sendBtn.classList.add("has-text");
   }, 10);
 });
