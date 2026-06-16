@@ -14,9 +14,9 @@ const CONFIG = {
   AGENT_REFERENCE: 'default-agent-id',
   
   // ========== AUTENTICAÇÃO MICROSOFT/AZURE AD ==========
-  // IMPORTANTE: Adicione o Client ID do seu registro no Azure AD
-  MICROSOFT_CLIENT_ID: 'ADICIONE_SEU_CLIENT_ID_AQUI', // Ex: '12345678-1234-1234-1234-123456789012'
-  MICROSOFT_TENANT_ID: 'common', // Ou o ID do seu tenant
+  // Chaves públicas de identificação fornecidas pelo TI
+  MICROSOFT_CLIENT_ID: '2bafacb4-5e31-4f69-84c1-930bd6e67053', 
+  MICROSOFT_TENANT_ID: '0642f02d-fac6-4b75-a65c-110a5c024f78',
   
   // Outras configurações podem ser adicionadas aqui
   ENABLE_DEBUG: true,

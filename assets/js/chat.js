@@ -77,10 +77,10 @@ menuBtn.addEventListener("click", openSidebar);
 sidebarClose.addEventListener("click", closeSidebar);
 sidebarOverlay.addEventListener("click", closeSidebar);
 
-const CHAT_STORAGE_KEY = "gc_saved_chats_v1";
 const SYSTEM_PROMPT = "Você é um assistente virtual prestativo. Responda de forma clara e concisa em português.";
 
-window.addEventListener('DOMContentLoaded', () => {
+// Inicialização Assíncrona
+window.addEventListener('DOMContentLoaded', async () => {
   authManager.loadStoredToken();
   authManager.handleAuthCallback();
 
@@ -88,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
     console.error('❌ Marked.js NÃO foi carregado! Formatação Markdown não funcionará.');
   }
 
-  loadSavedChats();
+  await loadSavedChats();
   startNewChat();
 });
 
@@ -110,23 +110,49 @@ function resetConversationHistory(messages = [createSystemMessage()]) {
   messages.forEach((message) => conversationHistory.push(message));
 }
 
-function persistSavedChats() {
+// 🔥 INTEGRAÇÃO COM BANCO DE DADOS DA AZURE/PYTHON 🔥
+
+async function persistSavedChats(snapshot) {
+  if (!authManager.isLoggedIn()) return; 
+  
   try {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(savedChats));
+    await fetch(`${API_URL}/history`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authManager.getToken()}`
+      },
+      body: JSON.stringify(snapshot)
+    });
   } catch (error) {
-    console.error("Erro ao salvar chats:", error);
+    console.error("Erro ao salvar chat no servidor:", error);
   }
 }
 
-function loadSavedChats() {
+async function loadSavedChats() {
+  if (!authManager.isLoggedIn()) {
+    savedChats = [];
+    renderSavedChats();
+    return;
+  }
+
   try {
-    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    savedChats = Array.isArray(parsed) ? parsed : [];
-    savedChats.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+    const response = await fetch(`${API_URL}/history`, {
+      headers: {
+        "Authorization": `Bearer ${authManager.getToken()}`
+      }
+    });
+    
+    if (response.ok) {
+      savedChats = await response.json();
+    } else {
+      savedChats = [];
+    }
   } catch (error) {
+    console.error("Erro ao carregar chats do servidor:", error);
     savedChats = [];
   }
+  
   renderSavedChats();
 }
 
@@ -138,7 +164,7 @@ function getChatTitle(messages) {
   return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
 }
 
-function syncCurrentChatToStorage() {
+async function syncCurrentChatToStorage() {
   const hasUserContent = conversationHistory.some((entry) => entry.role === "user");
   if (!hasUserContent) {
     renderSavedChats();
@@ -158,7 +184,9 @@ function syncCurrentChatToStorage() {
   if (existingIndex !== -1) savedChats.splice(existingIndex, 1);
 
   savedChats.unshift(snapshot);
-  persistSavedChats();
+  
+  // Envia para o Banco de Dados no Servidor
+  await persistSavedChats(snapshot); 
   renderSavedChats();
 }
 
@@ -169,14 +197,23 @@ function formatChatDate(isoDate) {
   return parsed.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-function deleteChat(chatId) {
+async function deleteChat(chatId) {
   const chat = savedChats.find((entry) => entry.id === chatId);
   if (!chat) return;
   const confirmed = window.confirm(`Deseja excluir a conversa "${chat.title || "Novo chat"}"?`);
   if (!confirmed) return;
 
+  // Deleta localmente e do Servidor
   savedChats = savedChats.filter((entry) => entry.id !== chatId);
-  persistSavedChats();
+  
+  if (authManager.isLoggedIn()) {
+    try {
+      await fetch(`${API_URL}/history/${chatId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${authManager.getToken()}` }
+      });
+    } catch (e) { console.error("Erro ao deletar", e); }
+  }
 
   if (currentChatId === chatId) {
     if (savedChats.length > 0) loadChat(savedChats[0].id);
@@ -228,9 +265,9 @@ function renderSavedChats() {
     deleteButton.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
     `;
-    deleteButton.addEventListener("click", (event) => {
+    deleteButton.addEventListener("click", async (event) => {
       event.stopPropagation();
-      deleteChat(chat.id);
+      await deleteChat(chat.id);
     });
 
     row.appendChild(button);
@@ -242,7 +279,7 @@ function renderSavedChats() {
   updateExpandButton();
 }
 
-// 🔥 SEGREDO 1: Ao voltar para o menu, a caixa volta a ter 3 linhas
+// 🔥 CONTROLO VISUAL DA CAIXA DE TEXTO (1 Linha vs 3 Linhas)
 function deactivateChatMode() {
   welcomeWrapper.classList.remove("hidden");
   chatContainer.classList.remove("chat-active");
@@ -253,7 +290,6 @@ function deactivateChatMode() {
   }
 }
 
-// 🔥 SEGREDO 2: Ao descer para o rodapé, a caixa é esmagada para 1 linha
 function activateChatMode() {
   if (welcomeWrapper && !welcomeWrapper.classList.contains("hidden")) {
     welcomeWrapper.classList.add("hidden");
@@ -314,7 +350,7 @@ async function sendMessage() {
 
   addMessage(message, "user");
   conversationHistory.push({ role: "user", content: message });
-  syncCurrentChatToStorage();
+  await syncCurrentChatToStorage();
   
   userInput.value = "";
   try {
@@ -346,19 +382,19 @@ async function sendMessage() {
       const assistantMessage = data.message.content;
       addMessage(assistantMessage, "assistant");
       conversationHistory.push({ role: "assistant", content: assistantMessage });
-      syncCurrentChatToStorage();
+      await syncCurrentChatToStorage();
     } else {
       const fallbackMessage = data.error || "Desculpe, ocorreu um erro ao processar sua mensagem.";
       addMessage(fallbackMessage, "assistant");
       conversationHistory.push({ role: "assistant", content: fallbackMessage });
-      syncCurrentChatToStorage();
+      await syncCurrentChatToStorage();
     }
   } catch (error) {
     typingIndicator.remove();
     const connectionErrorMessage = "Erro de conexão. Verifique se o servidor está rodando.";
     addMessage(connectionErrorMessage, "assistant");
     conversationHistory.push({ role: "assistant", content: connectionErrorMessage });
-    syncCurrentChatToStorage();
+    await syncCurrentChatToStorage();
   }
 
   userInput.disabled = false;
@@ -480,7 +516,6 @@ if (expandChatsBtn) {
   });
 }
 
-// 🔥 SEGREDO 3: Medição limpa que impede o pulo no primeiro caractere digitado 🔥
 userInput.addEventListener("input", () => {
   // Limpa a altura forçada primeiro para poder medir apenas o conteúdo real
   userInput.style.height = "auto"; 
