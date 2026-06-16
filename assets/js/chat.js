@@ -329,8 +329,69 @@ function addMessage(text, sender, skipScroll = false) {
   messageDiv.className = `message ${sender}`;
   
   if (sender === "assistant" && typeof marked !== 'undefined') {
-    marked.setOptions({ breaks: true, gfm: true });
+    marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
     messageDiv.innerHTML = marked.parse(text);
+    
+    // 🔥 FILTRO INTELIGENTE: Limpeza de links duplicados injetados pela IA
+    const links = Array.from(messageDiv.querySelectorAll('a[href*="/api/download/"]'));
+    const seenHrefs = new Set();
+    
+    // Lemos os links de trás para frente
+    for (let i = links.length - 1; i >= 0; i--) {
+      const link = links[i];
+      
+      // Se já detetámos este ficheiro no rodapé, o link atual (no título) é um intruso
+      if (seenHrefs.has(link.href)) {
+        const linkText = link.textContent.trim().toLowerCase();
+        
+        // Se a IA escreveu apenas "Baixar Arquivo", apagamos essa duplicação para limpar o texto
+        if (linkText.includes("baixar") || linkText.includes("download")) {
+          link.remove();
+        } else {
+          // Se a IA transformou o próprio título no botão, retiramos a formatação de botão mas mantemos o texto
+          const textNode = document.createTextNode(link.textContent);
+          link.replaceWith(textNode);
+        }
+        continue;
+      }
+      
+      // Marca o link como o oficial (o do rodapé)
+      seenHrefs.add(link.href);
+      
+      // Aplica a formatação do botão perfeitamente
+      const url = new URL(link.href, window.location.origin);
+      const filename = decodeURIComponent(url.pathname.split('/').pop());
+      
+      link.setAttribute('download', filename);
+      link.classList.add('pdf-download');
+      
+      // Interceta o clique para não dar o erro de recarregar a página ("F5")
+      link.addEventListener('click', (e) => {
+        e.preventDefault(); 
+        
+        const headers = {};
+        if (authManager.isLoggedIn()) {
+            headers["Authorization"] = `Bearer ${authManager.getToken()}`;
+        }
+
+        fetch(`${API_URL}/download/${encodeURIComponent(filename)}`, { headers })
+          .then(response => {
+            if (!response.ok) throw new Error(`Erro no servidor`);
+            return response.json();
+          })
+          .then(data => {
+            if (!data.success || !data.download_url) throw new Error('Link não fornecido.');
+            const downloadLink = document.createElement('a');
+            downloadLink.href = data.download_url;
+            downloadLink.target = '_blank'; 
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+          })
+          .catch(error => { alert(`❌ Erro ao baixar:\n\n${error.message}`); });
+      });
+    }
   } else {
     messageDiv.textContent = text;
   }
